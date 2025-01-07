@@ -2,11 +2,11 @@
 export PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 auth_crpyt_key=$(head /dev/urandom | tr -dc a-f0-9 | head -c 16)
 auth_key=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 32)
-default_web_admin=justdoit
-default_web_passwd=S5in123
+default_web_admin=spark
+default_web_passwd=123166
 default_web_port=12123
 default_s5_port=49678
-default_s5_user=justdoit
+default_s5_user=spark
 default_s5_pwd=Aa123456
 
 errorMsg=反馈群t.me/Scoks55555
@@ -274,7 +274,7 @@ update_tasks_json() {
   # 替换原文件
   mv "$tmp_file" "$config_file"
 
-  echo "Updated Port to $port and S5User to $s5user in $config_file"
+  echo "Updated Port to $default_s5_port and S5User to ${default_s5_user}:${default_s5_pwd} in $config_file"
 }
 
 
@@ -326,7 +326,9 @@ InstallServer()
 
     # cat ./conf/nps.conf
     # cat ./conf/tasks.json
+    echo "服务端文件安装中..."
     sudo  ./nps install && nps start
+    echo "服务端安装成功"
 }
 
 InstallClient()
