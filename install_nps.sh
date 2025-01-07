@@ -119,7 +119,7 @@ allUninstall(){
 
 checkIp(){
 
-    ipAdd=`curl curl ifconfig.co -4 -s --connect-timeout 10`
+    ipAdd=`curl ifconfig.co -4 -s --connect-timeout 10`
     clear
     echo "当前ip地址："${ipAdd}
     read -p "如果不对请停止安装或者手动输入服务器ip：(y/n/ip)： " choice
@@ -436,7 +436,7 @@ if [[ $menuChoice == 1 ]];then
     echo "--登录密码: $default_passwd"
     # echo "--web端口: $default_web_port"
 	echo "默认socks5账号信息:账号 $default_s5_user 密码 $default_s5_pwd 端口 $default_s5_port"
-    echo "使用命令测试代理: curl -x socks5h://$default_s5_user:$default_s5_pwd@${ipAdd}:$default_s5_port ifconfig.co"
+    echo "使用命令测试代理: curl -x socks5h://$default_s5_user:$default_s5_pwd@${ipAdd}:$default_s5_port http://myip.ipip.net"
 	echo "如需修改后台管理端口以及账号密码请看github"
 
 fi
