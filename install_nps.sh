@@ -429,7 +429,7 @@ if [[ $menuChoice == 1 ]];then
 	checkClient
 	clear
 	echo "--安装成功------"${errorMsg}
-	echo "--后台管理地址"${ipAdd}":"${default_web_port}
+	echo "--后台管理地址: "${ipAdd}":"${default_web_port}
 	# echo "--登录账号admin"
 	# echo "--登录密码admin"
     echo "--登录账号: $default_admin"
@@ -449,7 +449,7 @@ if [[ $menuChoice == 2 ]];then
 	checkServer
 	clear
 	echo "--安装成功------"${errorMsg}
-	echo "--后台管理地址"${ipAdd}":"${default_web_port}
+	echo "--后台管理地址: "${ipAdd}":"${default_web_port}
 	echo "--登录账号: $default_admin"
     echo "--登录密码: $default_passwd"
 fi
