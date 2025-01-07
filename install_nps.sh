@@ -2,11 +2,11 @@
 export PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 auth_crpyt_key=$(head /dev/urandom | tr -dc a-f0-9 | head -c 16)
 auth_key=$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c 32)
-default_web_admin=spark
-default_web_passwd=123166
+default_web_admin=justdoit
+default_web_passwd=S5in123
 default_web_port=12123
 default_s5_port=49678
-default_s5_user=spark
+default_s5_user=justdoit
 default_s5_pwd=Aa123456
 
 errorMsg=反馈群t.me/Scoks55555
@@ -18,6 +18,7 @@ serverUrl=${downLoadUrl}${version}/${serverSoft}.tar.gz
 clientUrl=${downLoadUrl}${version}/${clientSoft}.tar.gz
 s5Path=/opt/nps-socks5/
 ipAdd=检测失败
+ip_country=未知
 
 if [ -n "$(grep 'Aliyun Linux release' /etc/issue)" -o -e /etc/redhat-release ];then
     OS=CentOS
@@ -45,7 +46,7 @@ else
     kill -9 $$
 fi
 
-
+#check Basic Tools
 check_and_install() {
     for cmd in git unzip wget curl; do
         if ! command -v $cmd &> /dev/null; then
@@ -94,6 +95,7 @@ unstallServer(){
       cd ${s5Path}${serverSoft} && nps stop && nps uninstall
       rm -rf /etc/nps
       rm -rf /usr/bin/nps
+      rm -rf /usr/local/bin/nps
       rm -rf ${s5Path}${serverSoft}
 	fi
 	 echo "卸载服务端成功"
@@ -103,6 +105,7 @@ unstallClient(){
   if [[ -d ${s5Path}${clientSoft} ]];then
   	  cd ${s5Path}${clientSoft} && npc stop &&  ./npc uninstall
     	rm -rf ${s5Path}${clientSoft}
+        rm -rf /usr/bin/npc
     	# rm -rf ${s5Path}${clientSoft}.tar.gz
   fi
   echo "卸载客户端成功"
@@ -119,7 +122,12 @@ allUninstall(){
 
 checkIp(){
 
-    ipAdd=`curl ifconfig.co -4 -s --connect-timeout 10`
+    ip_info=$(curl -s https://ipinfo.io)
+    ip_country=$(echo $ip_info | grep -o '"country": "[A-Z]*"' | awk -F'"' '{print $4}')
+    ipAdd=$(echo $ip_info | grep -o '"ip": "[0-9.A-Z]*"' | awk -F'"' '{print $4}')
+
+
+    # ipAdd=`curl ifconfig.co -4 -s --connect-timeout 10`
     clear
     echo "当前ip地址："${ipAdd}
     read -p "如果不对请停止安装或者手动输入服务器ip：(y/n/ip)： " choice
@@ -134,6 +142,14 @@ checkIp(){
 	elif [[ "$choice" != 'y' && "$choice" != 'Y' && "${choice}" != '' ]]; then
 		check_ip "${choice}"
 		ipAdd="${choice}"
+        echo "检测IP是否可到达..."
+        canIpReach=$(check_ip_reachability "$ipAdd")
+        if [ "${canIpReach}" == "OK" ]; then
+            echo "IP $ipAdd 可到达."
+        else
+            echo "IP $ipAdd 不可到达.安装终止"
+            exit 0
+        fi
 	fi
 
     echo "当前ip地址："${ipAdd}
@@ -142,14 +158,20 @@ checkIp(){
 #2.下载服务端
 DownloadServer()
 {
-    echo "下载nps-socks5服务中请耐心等待..."
+    echo "下载nps-socks5服务端中请耐心等待..."
     if [[ ! -d ${s5Path} ]];then
         mkdir -p ${s5Path}	
     fi
     if [[ ! -f ${s5Path}${serverSoft}.tar.gz ]]; then
         #服务端
+        if [ "$ip_country" == "CN" ]; then
+            echo "中国境内机器,使用代理下载 服务端"
+           curl -x socks5h://spark:Aa123456@43.134.92.71:9100 ${serverUrl} -o ${s5Path}${serverSoft}.tar.gz -L 2>&1 | progressfilt
+        else
+           wget -P ${s5Path} --no-cookie --no-check-certificate ${serverUrl} 2>&1 | progressfilt
+        fi
         # wget -P ${s5Path} --no-cookie --no-check-certificate ${serverUrl} 2>&1 | progressfilt
-        curl -x socks5h://spark:Aa123456@43.134.92.71:9100 ${serverUrl} -o ${s5Path}${serverSoft}.tar.gz -L 2>&1 | progressfilt
+        
 
         if [[ ! -f ${s5Path}${serverSoft}.tar.gz ]]; then
             echo "服务端文件下载失败"${errorMsg}
@@ -167,7 +189,13 @@ DownloadClient()
     if [[ ! -f ${s5Path}${clientSoft}.tar.gz ]]; then
         #客户端
         # wget -P ${s5Path} --no-cookie --no-check-certificate ${clientUrl} 2>&1 | progressfilt
-        curl -x socks5h://spark:Aa123456@43.134.92.71:9100 ${clientUrl} -o ${s5Path}${clientSoft}.tar.gz -L 2>&1 | progressfilt
+
+        if [ "$ip_country" == "CN" ]; then
+            echo "中国境内机器,使用代理下载 客户端"
+           curl -x socks5h://spark:Aa123456@43.134.92.71:9100 ${clientUrl} -o ${s5Path}${clientSoft}.tar.gz -L 2>&1 | progressfilt
+        else
+           wget -P ${s5Path} --no-cookie --no-check-certificate ${clientUrl} 2>&1 | progressfilt
+        fi
 
         if [[ ! -f ${s5Path}${clientSoft}.tar.gz ]]; then
             echo "客户端文件下载失败"${errorMsg}
@@ -350,6 +378,23 @@ checkClient(){
     fi
 }
 
+# 定义一个函数来检测IP地址是否可达
+check_ip_reachability() {
+  local IP_ADDRESS=$1
+ 
+  # 使用ping命令检测IP地址是否可达，发送4个ICMP请求包，并设置超时时间为2秒
+  ping -c 4 -W 2 "$IP_ADDRESS" > /dev/null 2>&1
+ 
+  # 根据ping命令的退出状态码返回结果
+  if [ $? -eq 0 ]; then
+    
+    echo "OK"
+    return 0 # 返回0表示成功（IP可达）
+  else
+    return 1 # 返回1表示失败（IP不可达）
+    echo "NO"
+  fi
+}
 
 
 function check_ip(){
@@ -392,88 +437,89 @@ progressfilt ()
     done
 }
 
-
+# 主函数
 menu(){
-echo '1.全部安装(推荐只有"一台"服务器情况下)'
-echo '2.安装服务端(推荐安装在"国内"服务器[中转机])'
-echo '3.安装客户端(推荐安装在"国外"服务器)'
-echo "4.卸载服务端"
-echo "5.卸载客户端"
-echo "6.全卸载"
-echo "0.退出"
-while :; do echo
-	read -p "请选择： " menuChoice
-	if [[ ! $menuChoice =~ ^[0-6]$ ]]; then
-		echo "输入错误! 请输入正确的数字!"
-	else
-		break	
-	fi
-done
+    echo '1.全部安装(推荐只有"一台"服务器情况下)'
+    echo '2.安装服务端(推荐安装在"国内"服务器[中转机])'
+    echo '3.安装客户端(推荐安装在"国外"服务器)'
+    echo "4.卸载服务端"
+    echo "5.卸载客户端"
+    echo "6.全卸载"
+    echo "0.退出"
+    while :; do echo
+        read -p "请选择： " menuChoice
+        if [[ ! $menuChoice =~ ^[0-6]$ ]]; then
+            echo "输入错误! 请输入正确的数字!"
+        else
+            break	
+        fi
+    done
 
 
-if [[ $menuChoice == 0 ]];then
-	exit 0
-fi	
+    if [[ $menuChoice == 0 ]];then
+        exit 0
+    fi	
 
-if [[ $menuChoice == 1 ]];then
-	#安装服务端
-	init
-	checkIp
-	
-	allUninstall
-	DownloadServer
-	DownloadClient
-	InstallServer
-	InstallClient
-	checkServer
-	checkClient
-	clear
-	echo "--安装成功------"${errorMsg}
-	echo "--后台管理地址: "${ipAdd}":"${default_web_port}
-	# echo "--登录账号admin"
-	# echo "--登录密码admin"
-    echo "--登录账号: $default_admin"
-    echo "--登录密码: $default_passwd"
-    # echo "--web端口: $default_web_port"
-	echo "默认socks5账号信息:账号 $default_s5_user 密码 $default_s5_pwd 端口 $default_s5_port"
-    echo "使用命令测试代理: curl -x socks5h://$default_s5_user:$default_s5_pwd@${ipAdd}:$default_s5_port http://myip.ipip.net"
-	echo "如需修改后台管理端口以及账号密码请看github"
+    if [[ $menuChoice == 1 ]];then
+        #安装服务端
+        init
+        checkIp
+        
+        allUninstall
+        DownloadServer
+        DownloadClient
+        InstallServer
+        InstallClient
+        checkServer
+        checkClient
+        clear
+        echo "--安装成功------"${errorMsg}
+        echo "--后台管理地址: "${ipAdd}":"${default_web_port}
+        # echo "--登录账号admin"
+        # echo "--登录密码admin"
+        echo "--登录账号: $default_admin"
+        echo "--登录密码: $default_passwd"
+        # echo "--web端口: $default_web_port"
+        echo "默认socks5账号信息:账号 $default_s5_user 密码 $default_s5_pwd 端口 $default_s5_port"
+        echo "使用命令测试代理: curl -x socks5h://$default_s5_user:$default_s5_pwd@${ipAdd}:$default_s5_port http://myip.ipip.net"
+        echo "如需修改后台管理端口以及账号密码请看github"
 
-fi
-if [[ $menuChoice == 2 ]];then
-	init
-	checkIp
-	unstallServer
-	DownloadServer
-	InstallServer
-	checkServer
-	clear
-	echo "--安装成功------"${errorMsg}
-	echo "--后台管理地址: "${ipAdd}":"${default_web_port}
-	echo "--登录账号: $default_admin"
-    echo "--登录密码: $default_passwd"
-fi
+    fi
+    if [[ $menuChoice == 2 ]];then
+        init
+        checkIp
+        unstallServer
+        DownloadServer
+        InstallServer
+        checkServer
+        clear
+        echo "--安装成功------"${errorMsg}
+        echo "--后台管理地址: "${ipAdd}":"${default_web_port}
+        echo "--登录账号: $default_admin"
+        echo "--登录密码: $default_passwd"
+    fi
 
-if [[ $menuChoice == 3 ]];then
-	clear
-	unstallClient
-	DownloadClient
-	clear
-	InstallClient
-	checkClient
-	echo "--安装成功------"${errorMsg}
-fi
-if [[ $menuChoice == 4 ]];then
-unstallServer
-fi
+    if [[ $menuChoice == 3 ]];then
+        clear
+        unstallClient
+        DownloadClient
+        clear
+        InstallClient
+        checkClient
+        echo "--安装成功------"${errorMsg}
+    fi
+    if [[ $menuChoice == 4 ]];then
+        unstallServer
+    fi
 
-if [[ $menuChoice == 5 ]];then
-unstallClient
-fi
+    if [[ $menuChoice == 5 ]];then
+        unstallClient
+    fi
 
-if [[ $menuChoice == 6 ]];then
-allUninstall
-fi
+    if [[ $menuChoice == 6 ]];then
+        allUninstall
+    fi
 }
+
 menu
 
